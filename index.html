@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jogo da Velha</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --x-color: #e8c547;
+      --o-color: #4fc3f7;
+      --text: #f0ece0;
+      --muted: #555;
+      --win-line: #ff5252;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.5rem, 8vw, 5rem);
+      letter-spacing: 0.15em;
+      color: var(--text);
+      text-align: center;
+      line-height: 1;
+    }
+
+    h1 span.x { color: var(--x-color); }
+    h1 span.o { color: var(--o-color); }
+
+    .status {
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+      min-height: 1.5rem;
+      text-align: center;
+      transition: color 0.3s;
+    }
+
+    .status.active { color: var(--text); }
+    .status.win { color: var(--win-line); }
+
+    .scoreboard {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .score-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .score-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .score-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .score-value.x { color: var(--x-color); }
+    .score-value.o { color: var(--o-color); }
+    .score-value.draw { color: var(--muted); }
+
+    .score-divider {
+      font-size: 0.7rem;
+      color: var(--border);
+      letter-spacing: 0.1em;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      padding: 6px;
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .cell {
+      width: clamp(80px, 22vw, 120px);
+      height: clamp(80px, 22vw, 120px);
+      background: var(--surface);
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      transition: background 0.15s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cell:hover:not(.taken) {
+      background: #1f1f1f;
+    }
+
+    .cell:active:not(.taken) {
+      transform: scale(0.95);
+    }
+
+    .cell.taken { cursor: default; }
+
+    .cell .mark {
+      opacity: 0;
+      transform: scale(0.4) rotate(-15deg);
+      transition: opacity 0.2s, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .cell.taken .mark {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+
+    .cell .mark.x { color: var(--x-color); }
+    .cell .mark.o { color: var(--o-color); }
+
+    .cell.win-cell {
+      background: #1a1a1a;
+    }
+
+    .cell.win-cell .mark {
+      text-shadow: 0 0 20px currentColor;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    button.btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.1s;
+    }
+
+    button.btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+    }
+
+    .btn-primary:hover { background: #d4d0c4; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { color: var(--text); border-color: #444; }
+
+    .turn-indicator {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      transition: background 0.3s, transform 0.3s;
+    }
+
+    .dot.x { background: var(--x-color); }
+    .dot.o { background: var(--o-color); }
+    .dot.inactive { background: var(--border); transform: scale(0.7); }
+  </style>
+</head>
+<body>
+
+  <h1><span class="x">X</span> vs <span class="o">O</span></h1>
+
+  <div class="scoreboard">
+    <div class="score-block">
+      <span class="score-label">Jogador X</span>
+      <span class="score-value x" id="score-x">0</span>
+    </div>
+    <div class="score-divider">———</div>
+    <div class="score-block">
+      <span class="score-label">Empate</span>
+      <span class="score-value draw" id="score-draw">0</span>
+    </div>
+    <div class="score-divider">———</div>
+    <div class="score-block">
+      <span class="score-label">Jogador O</span>
+      <span class="score-value o" id="score-o">0</span>
+    </div>
+  </div>
+
+  <div class="turn-indicator">
+    <div class="dot x" id="dot-x"></div>
+    <span class="status active" id="status">Vez do jogador X</span>
+    <div class="dot o inactive" id="dot-o"></div>
+  </div>
+
+  <div class="board" id="board">
+    <button class="cell" data-index="0"><span class="mark"></span></button>
+    <button class="cell" data-index="1"><span class="mark"></span></button>
+    <button class="cell" data-index="2"><span class="mark"></span></button>
+    <button class="cell" data-index="3"><span class="mark"></span></button>
+    <button class="cell" data-index="4"><span class="mark"></span></button>
+    <button class="cell" data-index="5"><span class="mark"></span></button>
+    <button class="cell" data-index="6"><span class="mark"></span></button>
+    <button class="cell" data-index="7"><span class="mark"></span></button>
+    <button class="cell" data-index="8"><span class="mark"></span></button>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-primary" id="btn-restart">Nova rodada</button>
+    <button class="btn btn-secondary" id="btn-reset">Zerar placar</button>
+  </div>
+
+  <script>
+    const cells = document.querySelectorAll('.cell');
+    const status = document.getElementById('status');
+    const scoreX = document.getElementById('score-x');
+    const scoreO = document.getElementById('score-o');
+    const scoreDraw = document.getElementById('score-draw');
+    const dotX = document.getElementById('dot-x');
+    const dotO = document.getElementById('dot-o');
+    const btnRestart = document.getElementById('btn-restart');
+    const btnReset = document.getElementById('btn-reset');
+
+    let board = Array(9).fill(null);
+    let current = 'X';
+    let gameOver = false;
+    let scores = { X: 0, O: 0, draw: 0 };
+
+    const wins = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function checkWinner() {
+      for (const [a,b,c] of wins) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return { winner: board[a], combo: [a,b,c] };
+        }
+      }
+      if (board.every(c => c)) return { winner: null, combo: [] };
+      return null;
+    }
+
+    function updateTurnIndicator() {
+      if (current === 'X') {
+        dotX.classList.remove('inactive');
+        dotO.classList.add('inactive');
+      } else {
+        dotO.classList.remove('inactive');
+        dotX.classList.add('inactive');
+      }
+    }
+
+    function handleClick(e) {
+      const cell = e.currentTarget;
+      const idx = parseInt(cell.dataset.index);
+      if (gameOver || board[idx]) return;
+
+      board[idx] = current;
+      const mark = cell.querySelector('.mark');
+      mark.textContent = current;
+      mark.className = 'mark ' + current.toLowerCase();
+      cell.classList.add('taken');
+
+      const result = checkWinner();
+      if (result) {
+        gameOver = true;
+        if (result.winner) {
+          result.combo.forEach(i => cells[i].classList.add('win-cell'));
+          status.textContent = `Jogador ${result.winner} venceu!`;
+          status.className = 'status win';
+          scores[result.winner]++;
+          scoreX.textContent = scores.X;
+          scoreO.textContent = scores.O;
+        } else {
+          status.textContent = 'Empate!';
+          status.className = 'status active';
+          scores.draw++;
+          scoreDraw.textContent = scores.draw;
+        }
+        dotX.classList.add('inactive');
+        dotO.classList.add('inactive');
+      } else {
+        current = current === 'X' ? 'O' : 'X';
+        status.textContent = `Vez do jogador ${current}`;
+        updateTurnIndicator();
+      }
+    }
+
+    function restart() {
+      board = Array(9).fill(null);
+      current = 'X';
+      gameOver = false;
+      status.textContent = 'Vez do jogador X';
+      status.className = 'status active';
+      cells.forEach(cell => {
+        cell.classList.remove('taken', 'win-cell');
+        const mark = cell.querySelector('.mark');
+        mark.textContent = '';
+        mark.className = 'mark';
+      });
+      updateTurnIndicator();
+    }
+
+    function resetAll() {
+      scores = { X: 0, O: 0, draw: 0 };
+      scoreX.textContent = 0;
+      scoreO.textContent = 0;
+      scoreDraw.textContent = 0;
+      restart();
+    }
+
+    cells.forEach(cell => cell.addEventListener('click', handleClick));
+    btnRestart.addEventListener('click', restart);
+    btnReset.addEventListener('click', resetAll);
+  </script>
+</body>
+</html>
