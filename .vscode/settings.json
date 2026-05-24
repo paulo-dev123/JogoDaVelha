@@ -1,0 +1,17 @@
+{
+    "editor.quickSuggestions": false,
+    "editor.suggestOnTriggerCharacters": false,
+
+    "editor.inlineSuggest.enabled": false,
+    "editor.parameterHints.enabled": false,
+
+    "editor.semanticHighlighting.enabled": false,
+    "editor.bracketPairColorization.enabled": false,
+
+    "explorer.confirmDelete": false,
+    "workbench.iconTheme": "material-icon-theme",
+    "workbench.colorTheme": "GitHub Light",
+
+    "editor.fontSize": 16,
+    "editor.fontLigatures": false
+}
